@@ -63,11 +63,12 @@ public final class PrimeSearch {
         return ranges;
     }
 
+    // Code to execute per-thread
     private static void searchRange(int workerId, Range range) {
         for (long n = range.start(); n<= range.end(); n++) {
             if (isPrime(n)) {
                 String primeLog = "[" + now() + "] worker-" + workerId + ": " + n;
-                System.out.println(primeLog);
+                System.out.println(primeLog); // each thread prints log
             }
         }
     }
@@ -102,7 +103,12 @@ public final class PrimeSearch {
             Thread t = new Thread(() -> searchRange(id, myRange), "worker-" + id);
             workers.add(t);
 
-            t.start();
+            try {
+                t.start();
+            } catch (OutOfMemoryError e) {
+                System.err.println("[OS Refusal : Thread Creation] Could not start worker " + i + " of " + x + "; cannot create thread");
+                System.exit(1);
+            }
         }
 
         try {
