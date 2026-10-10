@@ -31,7 +31,6 @@ public final class PrimeSearch {
                 return false;
             }
         }
-
         return true;
     }
 
@@ -70,6 +69,7 @@ public final class PrimeSearch {
             if (isPrime(n)) {
                 primes.add(n);
             }
+            if (n == range.end()) break;
         }
     }
 
@@ -137,7 +137,7 @@ public final class PrimeSearch {
                 sb.append(p).append(", ");
             }
         }
-        if (sb.length() > 0) {
+        if (!sb.isEmpty()) {
             sb.setLength(sb.length() - 2); // remove final trailing comma + space (", ")
         }
         System.out.println(sb);
