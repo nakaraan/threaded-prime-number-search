@@ -29,7 +29,7 @@ public final class ConfigLoader {
             lines = Files.readAllLines(path, StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new ConfigException(
-              "Failed to read configuration file: " + path,
+                    "Failed to read configuration file: " + path,
                     e
             );
         }
