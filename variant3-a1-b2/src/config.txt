@@ -1,5 +1,0 @@
-# [x] number of threads
-x = 100
-
-# [y] upper bound (inclusive) to search primes
-y = 1000

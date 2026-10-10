@@ -1,7 +1,8 @@
 package primesearch;
 
 /**
- * Thrown when configuration file is missing or has invalid values
+ * Thrown when configuration file is missing or has invalid values.
+ * <p> Supports custom error messages and attaching causes.
  *
  * @author Akaraan
  */

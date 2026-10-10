@@ -9,9 +9,15 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+// to lookup unique characteristics per variant, search "UNIQUE" (case-sensitive, UPPERCASE)
+
 /**
- * Class where prime search threading logic occurs.
- * Changes from previous variants can be looked up by searching "CHANGE"
+ * <b> VARIANT 3 (A1, B2):  Print immediately + Linear search but threaded divisibility testing per number. </b>
+ * <br>
+ * Class where prime search threading logic occurs. Employs linear search and threaded divisibility testing for every number.
+ * For every candidate number, thread pool divides tasks and searches through every potential divisor.
+ * UNIQUE: each task decrements a shared AtomicInteger to verify if search is complete across threads.
+ * UNIQUE: individual threads print verified results immediately
  */
 public final class PrimeSearch {
     // DateTimeFormatter for timestamp consistency
@@ -22,6 +28,16 @@ public final class PrimeSearch {
         return LocalDateTime.now().format(TIME_FORMAT);
     }
 
+
+    /**
+     * Checks if there is a divisor for a given candidate key, updates AtomicBoolean and AtomicInteger for synchronization
+     * @param number candidate number being checked for divisors
+     * @param workerIndex index of worker
+     * @param totalThreads totalThreads (x)
+     * @param isDivisorFound AtomicBoolean, shared per-number flag, and so every task sees another's write
+     * @param remainingCounter AtomicInteger, tracks how many worker threads are left to finish checking candidate number
+     * @return boolean. {@code true} if composite (has divisor), {@code false} if prime (no divisor)
+     */
     private static boolean findDivisors(long number, int workerIndex, int totalThreads, AtomicBoolean isDivisorFound, AtomicInteger remainingCounter) {
         try {
             for (long d = 2 + workerIndex; d <= number / d; d += totalThreads) {
@@ -54,7 +70,7 @@ public final class PrimeSearch {
             return;
         }
 
-        final int x = config.threadCount();
+        final int x = config.threadCount(); // load values from config
         final long y = config.upperLimit();
 
         // Log START of worker threads for transparency
@@ -62,7 +78,8 @@ public final class PrimeSearch {
 
         BlockingQueue<Runnable> workQueue = new LinkedBlockingQueue<>();
 
-        long keepAliveTime = 0;
+        // Fixed pool of x threads
+        long keepAliveTime = 0; // unused when core == max
         ThreadPoolExecutor executor = new ThreadPoolExecutor(
                 x, // corePoolSize
                 x, // maximumPoolSize
@@ -91,7 +108,7 @@ public final class PrimeSearch {
                         final int workerIndex = k;
                         final long number = i;
 
-                        tasks.add(() ->
+                        tasks.add(() -> // PER THREAD, FIND DIVISORS
                                 findDivisors(number, workerIndex, x, isDivisorFound, remaining)
                         );
                     }
@@ -99,10 +116,9 @@ public final class PrimeSearch {
                     List<Future<Boolean>> results = executor.invokeAll(tasks); // submit all tasks
 
                     for (Future<Boolean> result : results) {
-                        result.get();
+                        result.get(); // rethrow task exception
                     }
-                    // ---- [ ALL TASKS FINISHED BY NOW ] ----
-                    if (i == y) break;
+                    if (i == y) break; // stop before n++ (prevent overflow)
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt(); // set interrupt flag of thread -> make it transparent to higher program layers

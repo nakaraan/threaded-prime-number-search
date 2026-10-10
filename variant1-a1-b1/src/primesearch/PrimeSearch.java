@@ -6,11 +6,16 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
+// to lookup unique characteristics per variant, search "UNIQUE" (case-sensitive, UPPERCASE)
+
 /**
- * Class where prime search threading logic occurs.
+ * <b> VARIANT 1 (A1, B1):  Print immediately + Straight division of search range. </b>
+ * <br>
+ * Class where prime search threading logic occurs. Custom trial division algorithm was selected for simplicity.
+ * Handles Long overflow via employing {@code i <= n / i} instead of {@code i * i <= n}.
  */
 public final class PrimeSearch {
-    // DateTimeFormatter for timestamp consistency
+    // DateTimeFormatter for timestamp consistency. Immutable for thread safety.
     private static final DateTimeFormatter TIME_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
@@ -34,7 +39,13 @@ public final class PrimeSearch {
         return true;
     }
 
-    // Gets the range for a singular partition
+    /**
+     * Gets the range for a singular partition.
+     * @param index current threadIndex
+     * @param x total number of threads
+     * @param y upper bound to search primes
+     * @return Range object containing a unique range for one worker thread
+     */
     public static Range getRange(int index, int x, long y) {
         // threads -> x, max -> y for mathematical brevity
         long total, base, remaining, size, start, end;
@@ -53,7 +64,12 @@ public final class PrimeSearch {
         return new Range(start, end);
     }
 
-    // Collates all range partitions into a single list
+    /**
+     * Partitions ranges, collates into a single List object
+     * @param x total number of threads
+     * @param y upper bound to search primes
+     * @return List<Range> object containing partitioned set of ranges
+     */
     public static List<Range> splitRange(int x, long y) {
         ArrayList<Range> ranges = new ArrayList<>();
 
@@ -63,7 +79,13 @@ public final class PrimeSearch {
         return ranges;
     }
 
-    // Code to execute per-thread
+
+    /**
+     * Searches range for all known primes.
+     * UNIQUE: Prints all found primes ({@code primeLog}) with a timestamp.
+     * @param workerId id of current thread searching range
+     * @param range Range object to be populated by individual thread
+     */
     private static void searchRange(int workerId, Range range) {
         for (long n = range.start(); n<= range.end(); n++) {
             if (isPrime(n)) {
@@ -85,7 +107,7 @@ public final class PrimeSearch {
             System.exit(1);
             return;
         }
-        int x = config.threadCount();
+        int x = config.threadCount(); // load values from config
         long y = config.upperLimit();
 
         // Log START of worker threads for transparency
@@ -94,9 +116,9 @@ public final class PrimeSearch {
 
         List<Thread> workers = new ArrayList<>();
 
-        // create threads
+        // Create threads
         for (int i = 0; i < x; i++) {
-            final int id = i;
+            final int id = i; // made final to use as lambda parameter
             final Range myRange = ranges.get(i);
 
             // create single thread

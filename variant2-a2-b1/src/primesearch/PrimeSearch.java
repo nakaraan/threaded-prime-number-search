@@ -6,9 +6,13 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
+// to lookup unique characteristics per variant, search "UNIQUE" (case-sensitive, UPPERCASE)
+
 /**
- * Class where prime search threading logic occurs.
- * Changes from previous variants can be looked up by searching "CHANGE"
+ * <b> VARIANT 2 (A2, B1):  Wait for all threads -> print + Straight division of search range. </b>
+ * <br>
+ * Class where prime search threading logic occurs. Custom trial division algorithm was selected for simplicity.
+ * Handles Long overflow via employing {@code i <= n / i} instead of {@code i * i <= n}.
  */
 public final class PrimeSearch {
     // DateTimeFormatter for timestamp consistency
@@ -34,7 +38,13 @@ public final class PrimeSearch {
         return true;
     }
 
-    // Gets the range for a singular partition
+    /**
+     * Gets the range for a singular partition.
+     * @param index current threadIndex
+     * @param x total number of threads
+     * @param y upper bound to search primes
+     * @return Range object containing a unique range for one worker thread
+     */
     public static Range getRange(int index, int x, long y) {
         // threads -> x, max -> y for mathematical brevity
         long total, base, remaining, size, start, end;
@@ -53,7 +63,12 @@ public final class PrimeSearch {
         return new Range(start, end);
     }
 
-    // Collates all range partitions into a single list
+    /**
+     * Partitions ranges, collates into a single List object
+     * @param x total number of threads
+     * @param y upper bound to search primes
+     * @return List<Range> object containing partitioned set of ranges
+     */
     public static List<Range> splitRange(int x, long y) {
         ArrayList<Range> ranges = new ArrayList<>();
 
@@ -63,13 +78,18 @@ public final class PrimeSearch {
         return ranges;
     }
 
-    // ---- CHANGE from variant1: Code to execute per-thread ; each worker adds to its OWN list (no printing, no shared list)
+    /**
+     * Searches range for all known primes.
+     * UNIQUE: Each worker will add to its OWN list (no printing, no shared list) to be joined at the end
+     * @param range Range object to be populated by individual thread
+     * @param primes List<Long> object to be populated with found primes
+     */
     private static void searchRange(Range range, List<Long> primes) {
         for (long n = range.start(); n <= range.end(); n++) {
             if (isPrime(n)) {
                 primes.add(n);
             }
-            if (n == range.end()) break;
+            if (n == range.end()) break; // stop before n++ (prevent overflow)
         }
     }
 
@@ -85,7 +105,7 @@ public final class PrimeSearch {
             System.exit(1);
             return;
         }
-        int x = config.threadCount();
+        int x = config.threadCount(); // load values from config
         long y = config.upperLimit();
 
         // Log START of worker threads for transparency
@@ -103,7 +123,7 @@ public final class PrimeSearch {
 
         // Create threads
         for (int i = 0; i < x; i++) {
-            final int id = i;
+            final int id = i; // made final to use as lambda parameter
             final Range myRange = ranges.get(i);
 
             // Create single thread
@@ -129,7 +149,7 @@ public final class PrimeSearch {
             System.exit(1);
         }
 
-        // ---- CHANGE from variant1: Combine all into one StringBuilder, then print once (e.g. 2, 3, 5, 7 instead of a println per prime).
+        // ---- UNIQUE: Combine all into one StringBuilder, then print once (e.g. 2, 3, 5, 7 instead of a println per prime).
         // ------- [happens-before] : join() called above guarantees all worker writes are visible here.
         StringBuilder sb = new StringBuilder();
         for (List<Long> primes : listOfLists) {   // worker order 0..x-1 = ascending ranges -> output already sorted
@@ -140,7 +160,7 @@ public final class PrimeSearch {
         if (!sb.isEmpty()) {
             sb.setLength(sb.length() - 2); // remove final trailing comma + space (", ")
         }
-        System.out.println(sb);
+        System.out.println(sb); // print output containing primes
 
         System.out.println("[" + now() + "] END");
     }
